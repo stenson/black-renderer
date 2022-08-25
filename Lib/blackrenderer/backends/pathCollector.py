@@ -5,14 +5,13 @@ from fontTools.pens.recordingPen import RecordingPen
 from fontTools.pens.transformPen import TransformPen
 from .base import Canvas, Surface
 
-class PathCollection():
-    def __init__(self, pen, method, data=None):
-        self.pen = pen
+class AnnotatedRecordingPen(RecordingPen):
+    def annotate(self, method, data):
         self.method = method
         self.data = data
-
+    
     def __repr__(self):
-        return f"PathCollection({self.method}{list(self.data.keys())})"
+        return f"AnnotatedRecordingPen({self.method}{list(self.data.keys())})"
 
 
 class PathCollectorCanvas(Canvas):
@@ -24,14 +23,13 @@ class PathCollectorCanvas(Canvas):
         self.currentTransform = Identity
 
     def _addPath(self, path, method, data):
-        glyphInfo = path.glyphInfo
         if self.currentTransform != Identity:
             path = transformPath(path, self.currentTransform)
-        path.glyphInfo = glyphInfo
-        self.paths.append(PathCollection(path, method, data))
+        path.annotate(method, data)
+        self.paths.append(path)
 
     def newPath(self):
-        return RecordingPen()
+        return AnnotatedRecordingPen()
 
     @contextmanager
     def savedState(self):
@@ -166,4 +164,6 @@ def transformPath(path, transform):
     transformedPath = RecordingPen()
     tpen = TransformPen(transformedPath, transform)
     path.replay(tpen)
-    return transformedPath
+    # to keep the path ref the same
+    path.value = transformedPath.value
+    return path

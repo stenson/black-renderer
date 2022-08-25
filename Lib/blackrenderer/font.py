@@ -1,4 +1,5 @@
 from collections import UserList
+from typing import NamedTuple
 from contextlib import contextmanager
 from io import BytesIO
 import logging
@@ -145,7 +146,7 @@ class BlackRendererFont:
             bounds = self._getGlyphBounds(glyphName)
         return bounds
 
-    def drawGlyph(self, glyphName, canvas, *, palette=None, textColor=(0, 0, 0, 1), glyphInfo=None):
+    def drawGlyph(self, glyphName, canvas, *, palette=None, textColor=(0, 0, 0, 1)):
         if palette is None and self.palettes:
             palette = self.palettes[0]
         self.currentPalette = palette
@@ -160,28 +161,24 @@ class BlackRendererFont:
             return
         glyph = self.colrV0Glyphs.get(glyphName)
         if glyph is not None:
-            self._drawGlyphCOLRv0(glyph, canvas)
-            return
+            return self._drawGlyphCOLRv0(glyph, canvas)
         else:
-            self._drawGlyphNoColor(glyphName, canvas, glyphInfo=glyphInfo)
+            return [self._drawGlyphNoColor(glyphName, canvas)]
 
-    def _drawGlyphNoColor(self, glyphName, canvas, glyphInfo=None):
+    def _drawGlyphNoColor(self, glyphName, canvas):
         path = canvas.newPath()
         self._drawGlyphOutline(glyphName, path)
-        
-        try:
-            path.glyphInfo = glyphInfo
-        except Exception as e:
-            print("Failed to set glyphInfo")
-            print(e)
-        
         canvas.drawPathSolid(path, self.textColor)
+        return path
 
     def _drawGlyphCOLRv0(self, layers, canvas):
+        layerPaths = []
         for layer in layers:
             path = canvas.newPath()
             self._drawGlyphOutline(layer.name, path)
             canvas.drawPathSolid(path, self._getColor(layer.colorID, 1))
+            layerPaths.append(path)
+        return layerPaths
 
     def _drawGlyphCOLRv1(self, glyph, canvas):
         if glyph.BaseGlyph in self._recursionCheck:

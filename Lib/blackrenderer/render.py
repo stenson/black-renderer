@@ -72,16 +72,20 @@ def renderText(
         raise BackendUnavailableError(backendName)
 
     surface = surfaceClass()
+    results = []
+
     with surface.canvas(bounds) as canvas:
         canvas.scale(scaleFactor)
         for glyph in glyphLine:
             with canvas.savedState():
                 canvas.translate(glyph.xOffset, glyph.yOffset)
-                font.drawGlyph(glyph.name, canvas, glyphInfo=glyph)
+                layers = font.drawGlyph(glyph.name, canvas)
+                if returnResult:
+                    results.append(GlyphResult(glyph, layers))
             canvas.translate(glyph.xAdvance, glyph.yAdvance)
 
     if returnResult:
-        return surface
+        return results
     elif outputPath is not None:
         surface.saveImage(outputPath)
     else:
@@ -133,3 +137,8 @@ class GlyphInfo(NamedTuple):
     yAdvance: float
     xOffset: float
     yOffset: float
+
+
+class GlyphResult(NamedTuple):
+    info: GlyphInfo
+    layers: tuple
