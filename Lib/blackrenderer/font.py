@@ -145,7 +145,7 @@ class BlackRendererFont:
             bounds = self._getGlyphBounds(glyphName)
         return bounds
 
-    def drawGlyph(self, glyphName, canvas, *, palette=None, textColor=(0, 0, 0, 1)):
+    def drawGlyph(self, glyphName, canvas, *, palette=None, textColor=(0, 0, 0, 1), glyphInfo=None):
         if palette is None and self.palettes:
             palette = self.palettes[0]
         self.currentPalette = palette
@@ -163,11 +163,18 @@ class BlackRendererFont:
             self._drawGlyphCOLRv0(glyph, canvas)
             return
         else:
-            self._drawGlyphNoColor(glyphName, canvas)
+            self._drawGlyphNoColor(glyphName, canvas, glyphInfo=glyphInfo)
 
-    def _drawGlyphNoColor(self, glyphName, canvas):
+    def _drawGlyphNoColor(self, glyphName, canvas, glyphInfo=None):
         path = canvas.newPath()
         self._drawGlyphOutline(glyphName, path)
+        
+        try:
+            path.glyphInfo = glyphInfo
+        except Exception as e:
+            print("Failed to set glyphInfo")
+            print(e)
+        
         canvas.drawPathSolid(path, self.textColor)
 
     def _drawGlyphCOLRv0(self, layers, canvas):

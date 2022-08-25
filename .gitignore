@@ -33,3 +33,6 @@ tags
 Lib/blackrenderer/_version.py
 Tests/tmpOutput/
 Vault/
+
+# Scratch files
+scratch/

@@ -28,6 +28,7 @@ def renderText(
     backendName=None,
     lang=None,
     script=None,
+    returnResult=False,
 ):
     font = BlackRendererFont(fontPath)
     glyphNames = font.glyphNames
@@ -54,15 +55,18 @@ def renderText(
     bounds = scaleRect(bounds, scaleFactor, scaleFactor)
     bounds = insetRect(bounds, -margin, -margin)
     bounds = intRect(bounds)
-    if outputPath is None:
+
+    suffix = None
+    if outputPath is None and not returnResult:
         suffix = ".svg"
-    else:
+    elif outputPath is not None:
         suffix = os.path.splitext(outputPath)[1].lower()
     if backendName is None:
         if suffix == ".svg":
             backendName = "svg"
         else:
             backendName = "skia"
+    
     surfaceClass = getSurfaceClass(backendName, suffix)
     if surfaceClass is None:
         raise BackendUnavailableError(backendName)
@@ -73,10 +77,12 @@ def renderText(
         for glyph in glyphLine:
             with canvas.savedState():
                 canvas.translate(glyph.xOffset, glyph.yOffset)
-                font.drawGlyph(glyph.name, canvas)
+                font.drawGlyph(glyph.name, canvas, glyphInfo=glyph)
             canvas.translate(glyph.xAdvance, glyph.yAdvance)
 
-    if outputPath is not None:
+    if returnResult:
+        return surface
+    elif outputPath is not None:
         surface.saveImage(outputPath)
     else:
         import tempfile
