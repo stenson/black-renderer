@@ -66,6 +66,21 @@ class SkiaPath(BasePen):
         self.path.close()
 
 
+class SkiaShaders():
+    @staticmethod
+    def drawPathLinearGradient(colorLine, pt1, pt2, extendMode, gradientTransform) -> skia.GradientShader:
+        matrix = skia.Matrix()
+        matrix.setAffine(gradientTransform)
+        colors, stops = _unpackColorLine(colorLine)
+        return skia.GradientShader.MakeLinear(
+            points=[pt1, pt2],
+            colors=colors,
+            positions=stops,
+            mode=_extendModeMap[extendMode],
+            localMatrix=matrix,
+        )
+
+
 class SkiaCanvas(Canvas):
     def __init__(self, canvas):
         self.canvas = canvas
@@ -106,16 +121,7 @@ class SkiaCanvas(Canvas):
     def drawPathLinearGradient(
         self, path, colorLine, pt1, pt2, extendMode, gradientTransform
     ):
-        matrix = skia.Matrix()
-        matrix.setAffine(gradientTransform)
-        colors, stops = _unpackColorLine(colorLine)
-        shader = skia.GradientShader.MakeLinear(
-            points=[pt1, pt2],
-            colors=colors,
-            positions=stops,
-            mode=_extendModeMap[extendMode],
-            localMatrix=matrix,
-        )
+        shader = SkiaShaders.drawPathLinearGradient(colorLine, pt1, pt2, extendMode, gradientTransform)
         self.canvas.drawPath(path.path, skia.Paint(AntiAlias=True, Shader=shader))
 
     def drawPathRadialGradient(

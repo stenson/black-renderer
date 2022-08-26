@@ -207,7 +207,6 @@ class BlackRendererFont:
             paint = VarTableWrapper(paint, self.instancer, self.varIndexMap)
         drawHandler = getattr(self, "_draw" + paintName)
         res = drawHandler(paint, canvas)
-        print(">", drawHandler.__name__, res)
         return res
 
     def _drawPaintColrLayers(self, paint, canvas):
