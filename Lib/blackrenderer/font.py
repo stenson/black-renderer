@@ -157,8 +157,7 @@ class BlackRendererFont:
         if glyph is not None:
             self.currentTransform = Identity
             self.currentPath = None
-            self._drawGlyphCOLRv1(glyph, canvas)
-            return
+            return self._drawGlyphCOLRv1(glyph, canvas)
         glyph = self.colrV0Glyphs.get(glyphName)
         if glyph is not None:
             return self._drawGlyphCOLRv0(glyph, canvas)
@@ -184,10 +183,12 @@ class BlackRendererFont:
         if glyph.BaseGlyph in self._recursionCheck:
             raise RecursionError(f"Glyph '{glyph.BaseGlyph}' references itself")
         self._recursionCheck.add(glyph.BaseGlyph)
+        res = None
         try:
-            self._drawPaint(glyph.Paint, canvas)
+            res = self._drawPaint(glyph.Paint, canvas)
         finally:
             self._recursionCheck.remove(glyph.BaseGlyph)
+        return res
 
     # COLRv1 Paint dispatch
 
@@ -205,15 +206,19 @@ class BlackRendererFont:
             paintName = PAINT_NAMES[nonVarFormat]
             paint = VarTableWrapper(paint, self.instancer, self.varIndexMap)
         drawHandler = getattr(self, "_draw" + paintName)
-        drawHandler(paint, canvas)
+        res = drawHandler(paint, canvas)
+        print(">", drawHandler.__name__, res)
+        return res
 
     def _drawPaintColrLayers(self, paint, canvas):
         n = paint.NumLayers
         s = paint.FirstLayerIndex
+        layers = []
         with self._ensureClipAndPushPath(canvas, None):
             for i in range(s, s + n):
                 with self._savedTransform():
-                    self._drawPaint(self.colrLayersV1.Paint[i], canvas)
+                    layers.append(self._drawPaint(self.colrLayersV1.Paint[i], canvas))
+        return layers
 
     def _drawPaintSolid(self, paint, canvas):
         color = self._getColor(paint.PaletteIndex, paint.Alpha)
@@ -277,6 +282,7 @@ class BlackRendererFont:
         self._drawGlyphOutline(paint.Glyph, path)
         with self._ensureClipAndPushPath(canvas, path):
             self._drawPaint(paint.Paint, canvas)
+        return path
 
     def _drawPaintColrGlyph(self, paint, canvas):
         with self._ensureClipAndPushPath(canvas, None):
