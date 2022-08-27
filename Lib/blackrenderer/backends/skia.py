@@ -109,6 +109,30 @@ class SkiaShaders():
             endAngle=endAngle,
             localMatrix=matrix,
         )
+    
+    @staticmethod
+    def drawPathRadialGradient(
+        colorLine,
+        startCenter,
+        startRadius,
+        endCenter,
+        endRadius,
+        extendMode,
+        gradientTransform,
+    ):
+        matrix = skia.Matrix()
+        matrix.setAffine(gradientTransform)
+        colors, stops = _unpackColorLine(colorLine)
+        return skia.GradientShader.MakeTwoPointConical(
+            start=startCenter,
+            startRadius=startRadius,
+            end=endCenter,
+            endRadius=endRadius,
+            colors=colors,
+            positions=stops,
+            mode=_extendModeMap[extendMode],
+            localMatrix=matrix,
+        )
 
 
 class SkiaCanvas(Canvas):
@@ -165,19 +189,7 @@ class SkiaCanvas(Canvas):
         extendMode,
         gradientTransform,
     ):
-        matrix = skia.Matrix()
-        matrix.setAffine(gradientTransform)
-        colors, stops = _unpackColorLine(colorLine)
-        shader = skia.GradientShader.MakeTwoPointConical(
-            start=startCenter,
-            startRadius=startRadius,
-            end=endCenter,
-            endRadius=endRadius,
-            colors=colors,
-            positions=stops,
-            mode=_extendModeMap[extendMode],
-            localMatrix=matrix,
-        )
+        shader = SkiaShaders.drawPathRadialGradient(colorLine, startCenter, startRadius, endCenter, endRadius, extendMode, gradientTransform)
         self.canvas.drawPath(path.path, skia.Paint(AntiAlias=True, Shader=shader))
 
     def drawPathSweepGradient(
