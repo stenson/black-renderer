@@ -1,4 +1,4 @@
-from typing import NamedTuple
+from typing import NamedTuple, List
 import os
 from fontTools.misc.arrayTools import (
     scaleRect,
@@ -28,12 +28,88 @@ def renderText(
     backendName=None,
     lang=None,
     script=None,
-    returnResult=False,
 ):
     font = BlackRendererFont(fontPath)
-    glyphNames = font.glyphNames
+
+    lineInfo = buildLineInfo(font,
+        textString,
+        features=features,
+        variations=variations,
+        lang=lang,
+        script=script)
 
     scaleFactor = fontSize / font.unitsPerEm
+
+    bounds = lineInfo.bounds
+    bounds = scaleRect(bounds, scaleFactor, scaleFactor)
+    bounds = insetRect(bounds, -margin, -margin)
+    bounds = intRect(bounds)
+
+    if outputPath is None:
+        suffix = ".svg"
+    elif outputPath is not None:
+        suffix = os.path.splitext(outputPath)[1].lower()
+    
+    if backendName is None:
+        if suffix == ".svg":
+            backendName = "svg"
+        else:
+            backendName = "skia"
+    
+    surfaceClass = getSurfaceClass(backendName, suffix)
+    if surfaceClass is None:
+        raise BackendUnavailableError(backendName)
+
+    surface = surfaceClass()
+
+    with surface.canvas(bounds) as canvas:
+        canvas.scale(scaleFactor)
+        for glyph in lineInfo.glyphLine:
+            with canvas.savedState():
+                canvas.translate(glyph.xOffset, glyph.yOffset)
+                layers = font.drawGlyph(glyph.name, canvas)
+            canvas.translate(glyph.xAdvance, glyph.yAdvance)
+
+    if outputPath is not None:
+        surface.saveImage(outputPath)
+    else:
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(suffix=".svg") as tmp:
+            surface.saveImage(tmp.name)
+            with open(tmp.name, "rb") as f:
+                svgData = f.read().decode("utf-8").rstrip()
+        print(svgData)
+
+
+def getLineGlyphs(
+    font:BlackRendererFont,
+    lineInfo:"LineInfo",
+    ):
+    result = []
+    surface = getSurfaceClass("pathCollector", None)()
+
+    with surface.canvas(lineInfo.bounds) as canvas:
+        for glyph in lineInfo.glyphLine:
+            with canvas.savedState():
+                canvas.translate(glyph.xOffset, glyph.yOffset)
+                layers = font.drawGlyph(glyph.name, canvas)
+                result.append(GlyphResult(glyph, layers))
+            canvas.translate(glyph.xAdvance, glyph.yAdvance)
+
+    return result
+
+
+def buildLineInfo(
+    font:BlackRendererFont,
+    textString,
+    *,
+    features=None,
+    variations=None,
+    lang=None,
+    script=None,
+    ):
+    glyphNames = font.glyphNames
 
     buf = hb.Buffer()
     buf.add_str(textString)
@@ -52,53 +128,11 @@ def renderText(
     positions = buf.glyph_positions
     glyphLine = buildGlyphLine(infos, positions, glyphNames)
     bounds = calcGlyphLineBounds(glyphLine, font)
-    bounds = scaleRect(bounds, scaleFactor, scaleFactor)
-    bounds = insetRect(bounds, -margin, -margin)
-    bounds = intRect(bounds)
-
-    suffix = None
-    if outputPath is None and not returnResult:
-        suffix = ".svg"
-    elif outputPath is not None:
-        suffix = os.path.splitext(outputPath)[1].lower()
-    if backendName is None:
-        if suffix == ".svg":
-            backendName = "svg"
-        else:
-            backendName = "skia"
     
-    surfaceClass = getSurfaceClass(backendName, suffix)
-    if surfaceClass is None:
-        raise BackendUnavailableError(backendName)
-
-    surface = surfaceClass()
-    results = []
-
-    with surface.canvas(bounds) as canvas:
-        canvas.scale(scaleFactor)
-        for glyph in glyphLine:
-            with canvas.savedState():
-                canvas.translate(glyph.xOffset, glyph.yOffset)
-                layers = font.drawGlyph(glyph.name, canvas)
-                if returnResult:
-                    results.append(GlyphResult(glyph, layers))
-            canvas.translate(glyph.xAdvance, glyph.yAdvance)
-
-    if returnResult:
-        return results
-    elif outputPath is not None:
-        surface.saveImage(outputPath)
-    else:
-        import tempfile
-
-        with tempfile.NamedTemporaryFile(suffix=".svg") as tmp:
-            surface.saveImage(tmp.name)
-            with open(tmp.name, "rb") as f:
-                svgData = f.read().decode("utf-8").rstrip()
-        print(svgData)
+    return LineInfo(bounds, glyphLine)
 
 
-def buildGlyphLine(infos, positions, glyphNames):
+def buildGlyphLine(infos, positions, glyphNames) -> List["GlyphInfo"]:
     glyphLine = []
     for info, pos in zip(infos, positions):
         g = GlyphInfo(
@@ -128,6 +162,11 @@ def calcGlyphLineBounds(glyphLine, font):
         else:
             bounds = unionRect(bounds, glyphBounds)
     return bounds
+
+
+class LineInfo(NamedTuple):
+    bounds: tuple
+    glyphLine: List["GlyphInfo"]
 
 
 class GlyphInfo(NamedTuple):

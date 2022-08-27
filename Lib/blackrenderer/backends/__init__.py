@@ -8,7 +8,7 @@ _surfaces = {
         "coregraphics": "blackrenderer.backends.coregraphics.CoreGraphicsPixelSurface",
         "skia": "blackrenderer.backends.skia.SkiaPixelSurface",
         "svg": "blackrenderer.backends.svg.SVGSurface",
-        "paths": "blackrenderer.backends.pathCollector.PathCollectorSurface"
+        "pathCollector": "blackrenderer.backends.pathCollector.PathCollectorSurface"
     },
     ".png": {
         "cairo": "blackrenderer.backends.cairo.CairoPixelSurface",

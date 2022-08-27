@@ -162,7 +162,7 @@ class BlackRendererFont:
         if glyph is not None:
             return self._drawGlyphCOLRv0(glyph, canvas)
         else:
-            return [self._drawGlyphNoColor(glyphName, canvas)]
+            return self._drawGlyphNoColor(glyphName, canvas)
 
     def _drawGlyphNoColor(self, glyphName, canvas):
         path = canvas.newPath()

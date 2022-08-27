@@ -5,13 +5,13 @@ from fontTools.pens.recordingPen import RecordingPen
 from fontTools.pens.transformPen import TransformPen
 from .base import Canvas, Surface
 
-class AnnotatedRecordingPen(RecordingPen):
+class PathCollectorRecordingPen(RecordingPen):
     def annotate(self, method, data):
         self.method = method
         self.data = data
     
     def __repr__(self):
-        return f"AnnotatedRecordingPen({self.method}{list(self.data.keys())})"
+        return f"PathCollectorRecordingPen({self.method}{list(self.data.keys())})"
 
 
 class PathCollectorCanvas(Canvas):
@@ -29,7 +29,7 @@ class PathCollectorCanvas(Canvas):
         self.paths.append(path)
 
     def newPath(self):
-        return AnnotatedRecordingPen()
+        return PathCollectorRecordingPen()
 
     @contextmanager
     def savedState(self):
