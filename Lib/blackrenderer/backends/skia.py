@@ -66,75 +66,6 @@ class SkiaPath(BasePen):
         self.path.close()
 
 
-class SkiaShaders():
-    @staticmethod
-    def drawPathLinearGradient(colorLine, pt1, pt2, extendMode, gradientTransform) -> skia.GradientShader:
-        matrix = skia.Matrix()
-        matrix.setAffine(gradientTransform)
-        colors, stops = _unpackColorLine(colorLine)
-        return skia.GradientShader.MakeLinear(
-            points=[pt1, pt2],
-            colors=colors,
-            positions=stops,
-            mode=_extendModeMap[extendMode],
-            localMatrix=matrix,
-        )
-    
-    @staticmethod
-    def drawPathSweepGradient(
-        colorLine,
-        center,
-        startAngle,
-        endAngle,
-        extendMode,
-        gradientTransform,
-    ):
-        # The following is needed to please the Skia shader, but it's a bit fuzzy
-        # to me how this affects the spec. Translated from:
-        # https://source.chromium.org/chromium/chromium/src/+/master:third_party/skia/src/ports/SkFontHost_FreeType_common.cpp;l=673-686
-        startAngle %= 360
-        endAngle %= 360
-        if startAngle >= endAngle:
-            endAngle += 360
-        matrix = skia.Matrix()
-        matrix.setAffine(gradientTransform)
-        colors, stops = _unpackColorLine(colorLine)
-        return skia.GradientShader.MakeSweep(
-            cx=center[0],
-            cy=center[1],
-            colors=colors,
-            positions=stops,
-            mode=_extendModeMap[extendMode],
-            startAngle=startAngle,
-            endAngle=endAngle,
-            localMatrix=matrix,
-        )
-    
-    @staticmethod
-    def drawPathRadialGradient(
-        colorLine,
-        startCenter,
-        startRadius,
-        endCenter,
-        endRadius,
-        extendMode,
-        gradientTransform,
-    ):
-        matrix = skia.Matrix()
-        matrix.setAffine(gradientTransform)
-        colors, stops = _unpackColorLine(colorLine)
-        return skia.GradientShader.MakeTwoPointConical(
-            start=startCenter,
-            startRadius=startRadius,
-            end=endCenter,
-            endRadius=endRadius,
-            colors=colors,
-            positions=stops,
-            mode=_extendModeMap[extendMode],
-            localMatrix=matrix,
-        )
-
-
 class SkiaCanvas(Canvas):
     def __init__(self, canvas):
         self.canvas = canvas
@@ -175,7 +106,16 @@ class SkiaCanvas(Canvas):
     def drawPathLinearGradient(
         self, path, colorLine, pt1, pt2, extendMode, gradientTransform
     ):
-        shader = SkiaShaders.drawPathLinearGradient(colorLine, pt1, pt2, extendMode, gradientTransform)
+        matrix = skia.Matrix()
+        matrix.setAffine(gradientTransform)
+        colors, stops = _unpackColorLine(colorLine)
+        shader = skia.GradientShader.MakeLinear(
+            points=[pt1, pt2],
+            colors=colors,
+            positions=stops,
+            mode=_extendModeMap[extendMode],
+            localMatrix=matrix,
+        )
         self.canvas.drawPath(path.path, skia.Paint(AntiAlias=True, Shader=shader))
 
     def drawPathRadialGradient(
@@ -189,7 +129,19 @@ class SkiaCanvas(Canvas):
         extendMode,
         gradientTransform,
     ):
-        shader = SkiaShaders.drawPathRadialGradient(colorLine, startCenter, startRadius, endCenter, endRadius, extendMode, gradientTransform)
+        matrix = skia.Matrix()
+        matrix.setAffine(gradientTransform)
+        colors, stops = _unpackColorLine(colorLine)
+        shader = skia.GradientShader.MakeTwoPointConical(
+            start=startCenter,
+            startRadius=startRadius,
+            end=endCenter,
+            endRadius=endRadius,
+            colors=colors,
+            positions=stops,
+            mode=_extendModeMap[extendMode],
+            localMatrix=matrix,
+        )
         self.canvas.drawPath(path.path, skia.Paint(AntiAlias=True, Shader=shader))
 
     def drawPathSweepGradient(
@@ -202,7 +154,26 @@ class SkiaCanvas(Canvas):
         extendMode,
         gradientTransform,
     ):
-        shader = SkiaShaders.drawPathSweepGradient(colorLine, center, startAngle, endAngle, extendMode, gradientTransform)
+        # The following is needed to please the Skia shader, but it's a bit fuzzy
+        # to me how this affects the spec. Translated from:
+        # https://source.chromium.org/chromium/chromium/src/+/master:third_party/skia/src/ports/SkFontHost_FreeType_common.cpp;l=673-686
+        startAngle %= 360
+        endAngle %= 360
+        if startAngle >= endAngle:
+            endAngle += 360
+        matrix = skia.Matrix()
+        matrix.setAffine(gradientTransform)
+        colors, stops = _unpackColorLine(colorLine)
+        shader = skia.GradientShader.MakeSweep(
+            cx=center[0],
+            cy=center[1],
+            colors=colors,
+            positions=stops,
+            mode=_extendModeMap[extendMode],
+            startAngle=startAngle,
+            endAngle=endAngle,
+            localMatrix=matrix,
+        )
         self.canvas.drawPath(path.path, skia.Paint(AntiAlias=True, Shader=shader))
 
 
